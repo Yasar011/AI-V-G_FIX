@@ -1,0 +1,19 @@
+# secrets — never commit these
+.env
+firebase-service-account.json
+
+# local artifacts
+captures/
+dataset_export/
+*.jpg
+*.png
+!README_assets/*
+
+# python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# model weights (can be large — track separately if needed)
+*.pt
