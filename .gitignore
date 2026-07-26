@@ -5,6 +5,10 @@ firebase-service-account.json
 # local artifacts
 captures/
 dataset_export/
+stage1_dataset/
+runs/
+runs_stage1/
+.cache/
 *.jpg
 *.png
 !README_assets/*

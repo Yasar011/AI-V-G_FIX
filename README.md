@@ -75,16 +75,24 @@ python capture.py
 
 ## About the model right now
 
-`MODEL_PATH` in `.env` defaults to `yolov8n.pt` — the generic model
-pretrained on everyday objects (COCO), **not** your garment defects yet.
-That's intentional: it lets you prove the whole pipeline (camera → model →
-Cloudinary → Firebase) actually works end to end today, with zero setup
-cost, before Stage 1 fine-tuning is done.
+Stage 1 is done: `MODEL_PATH` points at `models/defect_best_stage1.pt`, a
+YOLOv8n fine-tuned on a public Roboflow fabric-defect dataset (4 classes:
+`Cassure`, `Tache`, `defaut`, `fil tire ou gros`). mAP50=0.542,
+mAP50-95=0.306 — a real proof-of-concept, not production-grade yet, but it
+actually detects fabric defects instead of COCO objects.
 
-Once you've fine-tuned a model on Colab using the public defect datasets
-(Stage 1 from the roadmap), download the resulting `best.pt`, drop it
-somewhere in this project, and point `MODEL_PATH` at it in `.env` — nothing
-else in the code needs to change.
+To reproduce or retrain, use `train_stage1.py` (needs a free Roboflow API
+key):
+
+```bash
+python train_stage1.py --api-key YOUR_KEY --workspace WORKSPACE --project PROJECT --version 1
+```
+
+Stage 3 (the real goal) is retraining on your own captured garments via
+the self-learning loop: flagged pieces get confirmed/corrected with
+`review.py`, then `export_dataset.py` turns verified corrections into a
+YOLO-format dataset you can fine-tune from `models/defect_best_stage1.pt`
+instead of starting over from the generic pretrained weights.
 
 ## Project structure
 
