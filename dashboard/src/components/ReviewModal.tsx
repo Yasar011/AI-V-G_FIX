@@ -5,9 +5,9 @@ import type { InspectionRecord } from "@/lib/types";
 import { deleteInspection, markReviewed } from "@/lib/review";
 
 const DECISION_COLORS: Record<string, string> = {
-  pass: "#22c55e",
-  review: "#f59e0b",
-  fail: "#ef4444",
+  pass: "var(--green)",
+  review: "var(--yellow)",
+  fail: "var(--red)",
 };
 
 export function ReviewModal({
@@ -36,57 +36,52 @@ export function ReviewModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl border border-slate-700 max-w-lg w-full p-6">
-        <div className="flex justify-between items-start mb-4">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
           <div>
-            <h3 className="text-lg font-bold text-slate-100">Review piece {record.pieceId}</h3>
-            <p className="text-sm" style={{ color: DECISION_COLORS[record.finalDecision] }}>
+            <h3 className="modal-title">Review piece {record.pieceId}</h3>
+            <p style={{ fontSize: 13, marginTop: 4, color: DECISION_COLORS[record.finalDecision], fontWeight: 600 }}>
               {record.finalDecision.toUpperCase()} — predicted &quot;{record.predictedDefect || "no defect"}&quot;
               {" "}({(record.confidence * 100).toFixed(0)}%)
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">✕</button>
+          <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
 
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={record.imageUrl} alt={record.pieceId} className="w-full rounded-lg mb-4 max-h-72 object-contain bg-black" />
+        <img src={record.imageUrl} alt={record.pieceId} style={{ width: "100%", borderRadius: 8, marginBottom: 16, maxHeight: 280, objectFit: "contain", background: "#000" }} />
 
-        <label className="text-slate-300 text-sm block mb-1">Ground-truth label</label>
-        <input
-          value={correction}
-          onChange={(e) => setCorrection(e.target.value)}
-          placeholder="e.g. hole, stain, none"
-          className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 mb-4"
-        />
+        <div className="form-group">
+          <label className="form-label">Ground-truth label</label>
+          <input
+            className="form-input"
+            value={correction}
+            onChange={(e) => setCorrection(e.target.value)}
+            placeholder="e.g. hole, stain, none"
+          />
+        </div>
 
-        <div className="flex gap-2 flex-wrap items-center">
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button
             disabled={saving}
             onClick={handleDelete}
             title="Delete this record permanently (e.g. demo/test captures)"
-            className="px-3 py-2 rounded-lg bg-red-950 hover:bg-red-900 text-red-400 text-sm font-medium disabled:opacity-50 border border-red-900"
+            className="btn btn-danger btn-sm"
           >
             Delete
           </button>
-          <button
-            disabled={saving}
-            onClick={() => save(record.predictedDefect || "none")}
-            className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50"
-          >
+          <button disabled={saving} onClick={() => save(record.predictedDefect || "none")} className="btn btn-ghost">
             Confirm predicted
           </button>
-          <button
-            disabled={saving}
-            onClick={() => save("none")}
-            className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50"
-          >
+          <button disabled={saving} onClick={() => save("none")} className="btn btn-ghost">
             No defect (false positive)
           </button>
           <button
             disabled={saving || !correction.trim()}
             onClick={() => save(correction.trim())}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold disabled:opacity-50 ml-auto"
+            className="btn btn-primary"
+            style={{ marginLeft: "auto" }}
           >
             {saving ? "Saving…" : "Save correction"}
           </button>

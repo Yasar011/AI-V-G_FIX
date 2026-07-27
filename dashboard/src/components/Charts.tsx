@@ -8,25 +8,28 @@ import {
 import type { InspectionRecord } from "@/lib/types";
 
 const DECISION_COLORS: Record<string, string> = {
-  pass: "#22c55e",
-  review: "#f59e0b",
-  fail: "#ef4444",
+  pass: "#0a9d82",
+  review: "#c98a00",
+  fail: "#e5484d",
 };
 
-const AXIS_STYLE = { fill: "#94a3b8", fontSize: 12 };
+const AXIS_STYLE = { fill: "#97a1b4", fontSize: 12 };
 const TOOLTIP_STYLE = {
-  background: "#1e293b",
-  border: "1px solid #334155",
+  background: "#ffffff",
+  border: "1px solid #e4e8f1",
   borderRadius: 8,
-  color: "#e2e8f0",
+  color: "#0f1a2e",
   fontSize: 12,
+  boxShadow: "0 1px 3px rgba(15,23,42,.06)",
 };
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-      <h3 className="text-slate-300 text-sm font-semibold mb-3">{title}</h3>
-      <div className="h-56">{children}</div>
+    <div className="card">
+      <div className="card-header">
+        <h3 className="card-title">{title}</h3>
+      </div>
+      <div className="chart-wrap">{children}</div>
     </div>
   );
 }
@@ -48,7 +51,7 @@ export function DecisionPie({ records }: { records: InspectionRecord[] }) {
             ))}
           </Pie>
           <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
+          <Legend wrapperStyle={{ fontSize: 12, color: "#5b6678" }} />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -72,11 +75,11 @@ export function DefectBar({ records }: { records: InspectionRecord[] }) {
     <ChartCard title="Most common defects">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e4e8f1" horizontal={false} />
           <XAxis type="number" tick={AXIS_STYLE} allowDecimals={false} />
           <YAxis type="category" dataKey="name" tick={AXIS_STYLE} width={90} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#33415555" }} />
-          <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#f4f6fb" }} />
+          <Bar dataKey="count" fill="#2f72e6" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -98,11 +101,11 @@ export function TrendLine({ records }: { records: InspectionRecord[] }) {
     <ChartCard title="Inspections over time">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e4e8f1" />
           <XAxis dataKey="date" tick={AXIS_STYLE} />
           <YAxis tick={AXIS_STYLE} allowDecimals={false} />
           <Tooltip contentStyle={TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
+          <Legend wrapperStyle={{ fontSize: 12, color: "#5b6678" }} />
           <Line type="monotone" dataKey="pass" stroke={DECISION_COLORS.pass} strokeWidth={2} dot={false} />
           <Line type="monotone" dataKey="review" stroke={DECISION_COLORS.review} strokeWidth={2} dot={false} />
           <Line type="monotone" dataKey="fail" stroke={DECISION_COLORS.fail} strokeWidth={2} dot={false} />
@@ -128,11 +131,11 @@ export function ConfidenceHistogram({ records }: { records: InspectionRecord[] }
     <ChartCard title="Confidence distribution">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e4e8f1" />
           <XAxis dataKey="name" tick={AXIS_STYLE} />
           <YAxis tick={AXIS_STYLE} allowDecimals={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#33415555" }} />
-          <Bar dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#f4f6fb" }} />
+          <Bar dataKey="count" fill="#7c5cff" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
