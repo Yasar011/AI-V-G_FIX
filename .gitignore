@@ -15,6 +15,7 @@ installer_output/
 *.png
 !README_assets/*
 !assets/*.png
+!dashboard/public/*.png
 
 # python
 __pycache__/

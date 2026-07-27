@@ -1,19 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useInspections } from "@/hooks/useInspections";
 import { StatCards } from "@/components/StatCards";
 import { DecisionPie, DefectBar, TrendLine, ConfidenceHistogram } from "@/components/Charts";
-import { InspectionTable } from "@/components/InspectionTable";
 
 export default function Home() {
   const records = useInspections();
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 sm:p-10">
+    <main className="min-h-screen p-6 sm:p-10">
       <div className="max-w-6xl mx-auto flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">G-FIX QC</h1>
-          <p className="text-slate-500 text-sm">Live inspection dashboard</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-100">Overview</h1>
+            <p className="text-slate-500 text-sm">Live inspection stats, at a glance</p>
+          </div>
+          <Link
+            href="/inspections"
+            className="text-sm font-medium text-blue-400 hover:text-blue-300"
+          >
+            View all inspections →
+          </Link>
         </div>
 
         {records === null ? (
@@ -27,7 +35,6 @@ export default function Home() {
               <TrendLine records={records} />
               <ConfidenceHistogram records={records} />
             </div>
-            <InspectionTable records={records} />
           </>
         )}
       </div>
