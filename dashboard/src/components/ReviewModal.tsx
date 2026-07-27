@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { InspectionRecord } from "@/lib/types";
-import { markReviewed } from "@/lib/review";
+import { deleteInspection, markReviewed } from "@/lib/review";
 
 const DECISION_COLORS: Record<string, string> = {
   pass: "#22c55e",
@@ -23,6 +23,14 @@ export function ReviewModal({
   async function save(value: string) {
     setSaving(true);
     await markReviewed(record.pieceId, value);
+    setSaving(false);
+    onClose();
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete piece ${record.pieceId} permanently? This can't be undone.`)) return;
+    setSaving(true);
+    await deleteInspection(record.pieceId);
     setSaving(false);
     onClose();
   }
@@ -52,7 +60,15 @@ export function ReviewModal({
           className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 mb-4"
         />
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <button
+            disabled={saving}
+            onClick={handleDelete}
+            title="Delete this record permanently (e.g. demo/test captures)"
+            className="px-3 py-2 rounded-lg bg-red-950 hover:bg-red-900 text-red-400 text-sm font-medium disabled:opacity-50 border border-red-900"
+          >
+            Delete
+          </button>
           <button
             disabled={saving}
             onClick={() => save(record.predictedDefect || "none")}

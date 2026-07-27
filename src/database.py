@@ -96,3 +96,19 @@ def get_verified_for_export():
         for piece_id, record in all_records.items()
         if record.get("humanVerified")
     ]
+
+
+def get_all_inspections():
+    """Returns [(pieceId, record), ...] for every inspection, oldest first."""
+    init_firebase()
+    ref = db.reference("inspections")
+    all_records = ref.get() or {}
+    items = list(all_records.items())
+    items.sort(key=lambda item: item[1].get("timestamp", ""))
+    return items
+
+
+def delete_inspection(piece_id):
+    """Permanently removes an inspection record (does not touch Cloudinary)."""
+    init_firebase()
+    db.reference("inspections").child(piece_id).delete()

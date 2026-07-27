@@ -1,4 +1,4 @@
-import { ref, update } from "firebase/database";
+import { ref, remove, update } from "firebase/database";
 import { db } from "@/lib/firebase";
 
 /**
@@ -11,4 +11,12 @@ export async function markReviewed(pieceId: string, correctedDefect: string) {
     correctedDefect,
     reviewedAt: new Date().toISOString(),
   });
+}
+
+/**
+ * Permanently removes an inspection record (e.g. demo/test captures that
+ * were never a real garment). Does not touch the Cloudinary image.
+ */
+export async function deleteInspection(pieceId: string) {
+  await remove(ref(db, `inspections/${pieceId}`));
 }
