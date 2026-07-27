@@ -102,9 +102,10 @@ python capture.py
 
 Stage 1 is done: `MODEL_PATH` points at `models/defect_best_stage1.pt`, a
 YOLOv8n fine-tuned on a public Roboflow fabric-defect dataset (4 classes:
-`Cassure`, `Tache`, `defaut`, `fil tire ou gros`). mAP50=0.542,
-mAP50-95=0.306 — a real proof-of-concept, not production-grade yet, but it
-actually detects fabric defects instead of COCO objects.
+`Cassure`, `Tache`, `defaut`, `fil tire ou gros`). mAP50=0.578,
+mAP50-95=0.351, precision=0.691 (150 epochs) — a real proof-of-concept,
+not production-grade yet, but it actually detects fabric defects instead
+of COCO objects.
 
 To reproduce or retrain, use `train_stage1.py` (needs a free Roboflow API
 key):
@@ -112,6 +113,11 @@ key):
 ```bash
 python train_stage1.py --api-key YOUR_KEY --workspace WORKSPACE --project PROJECT --version 1
 ```
+
+Note: for this hardware (GTX 1650, 4GB VRAM), stick to `yolov8n` —
+`yolov8s` needs more VRAM than the card has even at batch=1-2, and
+spills into slow shared system memory. `yolov8n` fits comfortably at
+batch=16 and trains ~3x faster as a result.
 
 Stage 3 (the real goal) is retraining on your own captured garments via
 the self-learning loop: flagged pieces get confirmed/corrected with
