@@ -1,5 +1,5 @@
 """
-AI Vision QC — desktop capture app.
+G-FIX QC — desktop capture app.
 
 Live camera feed -> YOLOv8 inference -> Cloudinary upload -> Firebase log.
 Click Capture (or press SPACE) to inspect whatever's in frame right now;
@@ -116,7 +116,7 @@ class ResultCard(QFrame):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AI Vision QC")
+        self.setWindowTitle("G-FIX QC")
         self.resize(1100, 650)
         self.setStyleSheet("QMainWindow { background: #0f172a; } QLabel { color: #e2e8f0; }")
 
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
 
         # --- left: camera feed + controls ---
         left = QVBoxLayout()
-        title = QLabel("AI Vision QC")
+        title = QLabel("G-FIX QC")
         title.setStyleSheet("font-size: 20px; font-weight: 700;")
         subtitle = QLabel(f"Model: {MODEL_PATH}")
         subtitle.setStyleSheet("color: #64748b; font-size: 12px;")

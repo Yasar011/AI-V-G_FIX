@@ -1,4 +1,4 @@
-# AI Vision QC — Laptop Capture Pipeline
+# G-FIX QC — Laptop Capture Pipeline
 
 This is the part of the project that runs **locally on your laptop**: camera
 capture → YOLOv8 inference → upload to Cloudinary → log to Firebase.
@@ -9,6 +9,31 @@ Your rig (i5 9th gen, GTX 1650 Ti, 16GB RAM, NVMe) is genuinely good for
 this: the 1650 Ti has 4GB of CUDA-capable VRAM, which is plenty for YOLOv8n/s
 inference in real time, and enough for fine-tuning small batches later if
 you ever want to train locally instead of on Colab.
+
+## Just want to run the app? (no Python needed)
+
+If you have the **G-FIX QC installer** (`G-FIX QC Setup.exe`), you don't
+need any of the developer setup below — Python, pip, and CUDA are all
+bundled in.
+
+1. Run `G-FIX QC Setup.exe` and follow the prompts (Next → Install →
+   Finish). It adds a Start Menu shortcut and an uninstaller.
+2. Launch **G-FIX QC** from the Start Menu.
+3. First run: a camera window opens. Place a piece in frame and press
+   **SPACE** (or click **CAPTURE**) to inspect it. The result — PASS,
+   REVIEW, or FAIL — appears in the results panel with a thumbnail and
+   confidence score.
+4. To uninstall later: Settings → Apps → **G-FIX QC** → Uninstall, or use
+   the shortcut in its Start Menu folder.
+
+**Note:** the installed app ships with this developer's own Cloudinary and
+Firebase credentials baked in, so results are logged to *this* project's
+database. If you want your own separate credentials, use the developer
+setup below instead and build your own package with `pip install
+pyinstaller` + the `PyInstaller` command in this README's packaging notes.
+
+The rest of this README is for developers who want to run from source,
+retrain the model, or build the installer themselves.
 
 ## 1. Set up the environment
 

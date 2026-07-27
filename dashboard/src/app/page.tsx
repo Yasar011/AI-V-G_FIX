@@ -12,7 +12,7 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 p-6 sm:p-10">
       <div className="max-w-6xl mx-auto flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">AI Vision QC</h1>
+          <h1 className="text-2xl font-bold text-slate-100">G-FIX QC</h1>
           <p className="text-slate-500 text-sm">Live inspection dashboard</p>
         </div>
 

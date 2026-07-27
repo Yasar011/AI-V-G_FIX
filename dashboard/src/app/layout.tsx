@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Vision QC — Dashboard",
-  description: "Live inspection dashboard for the AI Vision QC garment inspection system.",
+  title: "G-FIX QC — Dashboard",
+  description: "Live inspection dashboard for the G-FIX QC garment inspection system.",
 };
 
 export default function RootLayout({

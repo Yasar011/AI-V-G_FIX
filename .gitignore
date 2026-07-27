@@ -9,9 +9,12 @@ stage1_dataset/
 runs/
 runs_stage1/
 .cache/
+dist/
+installer_output/
 *.jpg
 *.png
 !README_assets/*
+!assets/*.png
 
 # python
 __pycache__/
