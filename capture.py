@@ -2,8 +2,10 @@
 G-FIX QC — desktop capture app.
 
 Live camera feed -> YOLOv8 inference -> Cloudinary upload -> Firebase log.
-Click Capture (or press SPACE) to inspect whatever's in frame right now;
-each result appears in the panel on the right with a thumbnail, decision
+No button to press: place a piece in frame and hold it still for a
+moment, and it captures and inspects itself automatically (see
+_check_auto_capture). SPACE still works as a manual override. Each
+result appears in the panel on the right with a thumbnail, decision
 badge, and confidence — plus running PASS/REVIEW/FAIL counters.
 
 Run with:  python capture.py
@@ -13,14 +15,19 @@ import sys
 import time
 
 import cv2
+import numpy as np
 from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QImage, QPixmap, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QLabel, QPushButton, QVBoxLayout,
+    QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout,
     QHBoxLayout, QScrollArea, QFrame,
 )
 
-from src.config import check_config, CAMERA_INDEX, CONFIDENCE_THRESHOLD, MODEL_PATH
+from src.config import (
+    check_config, CAMERA_INDEX, CONFIDENCE_THRESHOLD, MODEL_PATH,
+    AUTO_CAPTURE_MOTION_THRESHOLD, AUTO_CAPTURE_STILL_THRESHOLD,
+    AUTO_CAPTURE_STABLE_FRAMES, AUTO_CAPTURE_COOLDOWN_SECONDS,
+)
 from src.inference import run_inference
 from src.uploader import upload_image
 from src.database import log_inspection
@@ -124,6 +131,12 @@ class MainWindow(QMainWindow):
         self.worker = None
         self.current_frame = None
 
+        # auto-capture state (see _check_auto_capture)
+        self.prev_gray_small = None
+        self.seen_motion = False
+        self.stable_count = 0
+        self.cooldown_until = 0.0
+
         self.cap = cv2.VideoCapture(CAMERA_INDEX)
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open camera at index {CAMERA_INDEX}.")
@@ -158,19 +171,13 @@ class MainWindow(QMainWindow):
         self.feed_label.setAlignment(Qt.AlignCenter)
         left.addWidget(self.feed_label)
 
-        self.status_label = QLabel("Ready — place a piece in frame")
+        self.status_label = QLabel("Waiting for a piece — place one in frame and hold still")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px;")
         left.addWidget(self.status_label)
 
-        self.capture_btn = QPushButton("CAPTURE  (Space)")
-        self.capture_btn.setFixedHeight(48)
-        self.capture_btn.setStyleSheet("""
-            QPushButton { background: #3b82f6; color: white; font-size: 15px; font-weight: 700; border-radius: 8px; }
-            QPushButton:hover { background: #2563eb; }
-            QPushButton:disabled { background: #334155; color: #64748b; }
-        """)
-        self.capture_btn.clicked.connect(self._capture)
-        left.addWidget(self.capture_btn)
+        hint = QLabel("Auto-captures when the frame settles. Press SPACE to force a capture.")
+        hint.setStyleSheet("color: #64748b; font-size: 11px; padding: 0 6px;")
+        left.addWidget(hint)
 
         root.addLayout(left)
 
@@ -225,12 +232,51 @@ class MainWindow(QMainWindow):
         )
         self.feed_label.setPixmap(pixmap)
 
+        self._check_auto_capture(frame)
+
+    def _check_auto_capture(self, frame):
+        """Watches for a hand placing a piece (motion) followed by it
+        settling (stillness) and triggers a capture automatically - no
+        button/keypress needed. State machine per instance, ticked every
+        frame: idle -> motion seen -> stable -> capture -> cooldown."""
+        small = cv2.resize(frame, (160, 120))
+        gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY).astype(np.float32)
+
+        if self.prev_gray_small is None:
+            self.prev_gray_small = gray
+            return
+        diff = float(np.mean(np.abs(gray - self.prev_gray_small)))
+        self.prev_gray_small = gray
+
+        now = time.time()
+        if now < self.cooldown_until:
+            remaining = self.cooldown_until - now
+            self.status_label.setText(f"Remove the piece... ready again in {remaining:.0f}s")
+            self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px; color: #64748b;")
+            return
+
+        if self.worker is not None and self.worker.isRunning():
+            return
+
+        if diff > AUTO_CAPTURE_MOTION_THRESHOLD:
+            self.seen_motion = True
+            self.stable_count = 0
+            self.status_label.setText("Detecting piece...")
+            self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px; color: #60a5fa;")
+        elif self.seen_motion and diff < AUTO_CAPTURE_STILL_THRESHOLD:
+            self.stable_count += 1
+            if self.stable_count >= AUTO_CAPTURE_STABLE_FRAMES:
+                self.seen_motion = False
+                self.stable_count = 0
+                self._capture()
+        else:
+            self.stable_count = 0
+
     def _capture(self):
         if self.current_frame is None:
             return
         if self.worker is not None and self.worker.isRunning():
             return
-        self.capture_btn.setEnabled(False)
         self.status_label.setText("Inspecting...")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px; color: #94a3b8;")
 
@@ -250,12 +296,11 @@ class MainWindow(QMainWindow):
         self.stat_labels[decision].setText(str(self.stats[decision]))
 
         self.history_container.insertWidget(0, ResultCard(record))
-        self.capture_btn.setEnabled(True)
+        self.cooldown_until = time.time() + AUTO_CAPTURE_COOLDOWN_SECONDS
 
     def _on_error(self, message):
         self.status_label.setText(f"Error: {message}")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 700; padding: 6px; color: #ef4444;")
-        self.capture_btn.setEnabled(True)
 
     def closeEvent(self, event):
         self.timer.stop()

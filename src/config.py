@@ -22,6 +22,18 @@ CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
 CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", "0"))
 MODEL_PATH = os.getenv("MODEL_PATH", "yolov8n.pt")
 
+# --- Auto-capture (no button/keypress needed - triggers when a piece is
+# placed in frame and holds still) ---
+# Mean frame-to-frame pixel difference above this = something is moving
+# (a hand placing/removing a piece).
+AUTO_CAPTURE_MOTION_THRESHOLD = float(os.getenv("AUTO_CAPTURE_MOTION_THRESHOLD", "12.0"))
+# Below this = the frame is considered still.
+AUTO_CAPTURE_STILL_THRESHOLD = float(os.getenv("AUTO_CAPTURE_STILL_THRESHOLD", "4.0"))
+# Consecutive still frames required (after motion was seen) before capturing.
+AUTO_CAPTURE_STABLE_FRAMES = int(os.getenv("AUTO_CAPTURE_STABLE_FRAMES", "15"))
+# Seconds to wait after a capture before auto-capture can trigger again.
+AUTO_CAPTURE_COOLDOWN_SECONDS = float(os.getenv("AUTO_CAPTURE_COOLDOWN_SECONDS", "4.0"))
+
 
 def check_config():
     """Called at startup so missing credentials fail loudly and early,
