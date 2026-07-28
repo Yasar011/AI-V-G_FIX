@@ -1,0 +1,13 @@
+path: F:\ai_vision_qc\ai_vision_qc\stitch_dataset
+train: train/images
+val: valid/images
+test: test/images
+nc: 7
+names:
+- S1
+- S8
+- S13
+- S18
+- S22
+- S28
+- S_OTHER
