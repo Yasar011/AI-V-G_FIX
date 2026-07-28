@@ -6,6 +6,8 @@ firebase-service-account.json
 captures/
 dataset_export/
 stage1_dataset/
+raw_datasets/
+merged_dataset/
 runs/
 runs_stage1/
 .cache/
