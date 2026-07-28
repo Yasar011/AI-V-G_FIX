@@ -3,24 +3,42 @@ Local file logging so there's a record of what happened if the app
 crashes or errors out while running unattended (e.g. on a factory
 floor with nobody watching the terminal).
 
-Logs to logs/gfixqc.log, rotating at 5MB with 3 backups kept.
+Logs to <app dir>/logs/gfixqc.log, rotating at 5MB with 3 backups kept.
+The directory is resolved from the executable/script location rather
+than the working directory - a packaged app launched from a shortcut
+can have a cwd anywhere (or one it can't write to), which would
+silently produce no log at all.
 """
 import logging
 import os
 import sys
 from logging.handlers import RotatingFileHandler
 
-LOG_DIR = "logs"
-LOG_FILE = os.path.join(LOG_DIR, "gfixqc.log")
+
+def _app_dir():
+    if getattr(sys, "frozen", False):
+        # PyInstaller bundle: sit next to the .exe
+        return os.path.dirname(sys.executable)
+    # running from source: project root (this file lives in src/)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def setup_logging():
-    os.makedirs(LOG_DIR, exist_ok=True)
-
     logger = logging.getLogger("gfixqc")
     logger.setLevel(logging.INFO)
+    if logger.handlers:
+        return logger
 
-    handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=3)
+    log_dir = os.path.join(_app_dir(), "logs")
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        handler = RotatingFileHandler(
+            os.path.join(log_dir, "gfixqc.log"), maxBytes=5 * 1024 * 1024, backupCount=3
+        )
+    except OSError:
+        # last resort: at least get logs onto stderr rather than nowhere
+        handler = logging.StreamHandler(sys.stderr)
+
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     logger.addHandler(handler)
 
