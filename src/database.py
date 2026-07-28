@@ -121,6 +121,16 @@ def get_categories():
     return db.reference("config/categories").get() or {}
 
 
+def get_actions():
+    """
+    Returns {defect_name: {"verdict": "reject"|"rework"|"check",
+    "action": "what to do"}} - so the operator is told what to do with
+    the piece, not just what's wrong with it.
+    """
+    init_firebase()
+    return db.reference("config/actions").get() or {}
+
+
 def get_pending_review():
     """
     Returns [(pieceId, record), ...] for every REVIEW/FAIL piece that

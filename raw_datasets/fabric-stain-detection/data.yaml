@@ -1,0 +1,12 @@
+names:
+- stain
+nc: 1
+roboflow:
+  license: CC BY 4.0
+  project: fabric-stain-detection
+  url: https://universe.roboflow.com/college-wtlzk/fabric-stain-detection/dataset/1
+  version: 1
+  workspace: college-wtlzk
+test: ../test/images
+train: ../train/images
+val: ../valid/images

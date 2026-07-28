@@ -34,6 +34,7 @@ from src.inference import run_inference
 from src.uploader import upload_image
 from src.database import (
     log_inspection, get_recent_inspections, get_options, get_styles, get_categories,
+    get_actions,
 )
 from src.logging_setup import setup_logging
 from src.paths import app_path
@@ -58,6 +59,38 @@ def decide(defect, confidence):
     return "fail", defect
 
 
+def draw_detections(frame, detections):
+    """
+    Draws a labelled box around every detected defect so the operator can
+    see *where* the problem is, not just that there is one. Boxes come
+    back from inference as normalized xywh (YOLO's format), so they're
+    scaled to pixels here.
+    """
+    marked = frame.copy()
+    height, width = marked.shape[:2]
+
+    for det in detections or []:
+        bbox = det.get("bbox")
+        if not bbox:
+            continue
+        cx, cy, bw, bh = bbox
+        x1 = int((cx - bw / 2) * width)
+        y1 = int((cy - bh / 2) * height)
+        x2 = int((cx + bw / 2) * width)
+        y2 = int((cy + bh / 2) * height)
+
+        cv2.rectangle(marked, (x1, y1), (x2, y2), (0, 80, 255), 2)
+
+        label = f"{det['defect']} {det['confidence']:.0%}"
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        # keep the label on-screen when the box sits at the very top
+        ty = y1 - 6 if y1 - th - 8 > 0 else y2 + th + 8
+        cv2.rectangle(marked, (x1, ty - th - 4), (x1 + tw + 6, ty + 4), (0, 80, 255), -1)
+        cv2.putText(marked, label, (x1 + 3, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    return marked
+
+
 class InspectionWorker(QThread):
     """Runs inference + upload + logging off the UI thread so the app never
     freezes while waiting on the Cloudinary/Firebase network calls."""
@@ -72,19 +105,28 @@ class InspectionWorker(QThread):
     def run(self):
         try:
             os.makedirs(CAPTURE_DIR, exist_ok=True)
-            filename = os.path.join(CAPTURE_DIR, f"piece_{int(time.time())}.jpg")
+            stamp = int(time.time())
+            filename = os.path.join(CAPTURE_DIR, f"piece_{stamp}.jpg")
             cv2.imwrite(filename, self.frame)
 
             result = run_inference(filename)
             decision, reason = decide(result["defect"], result["confidence"])
-            image_url = upload_image(filename)
+
+            # Upload the version with the defects boxed on it, so the
+            # operator and the dashboard both see *where* the problem is
+            # rather than just its name.
+            marked = draw_detections(self.frame, result["detections"])
+            marked_name = os.path.join(CAPTURE_DIR, f"piece_{stamp}_marked.jpg")
+            cv2.imwrite(marked_name, marked)
+
+            image_url = upload_image(marked_name)
             record = log_inspection(
                 image_url, result["defect"], result["confidence"], decision, reason,
                 bbox=result["bbox"], detections=result["detections"],
                 line=self.context.get("line"), floor=self.context.get("floor"),
                 style=self.context.get("style"), operator=self.context.get("operator"),
             )
-            record["localImage"] = filename
+            record["localImage"] = marked_name
             self.done.emit(record)
         except Exception as exc:
             logger.exception("Inspection failed")
@@ -159,6 +201,7 @@ class MainWindow(QMainWindow):
         # production context + multi-view state (see _current_view)
         self.styles = []
         self.categories = {}
+        self.actions = {}
         self.garment_id = None
         self.view_index = 0
 
@@ -182,6 +225,7 @@ class MainWindow(QMainWindow):
         try:
             self.styles = get_styles()
             self.categories = get_categories()
+            self.actions = get_actions()
             self.line_combo.addItems(get_options("lines") or ["-"])
             self.floor_combo.addItems(get_options("floors") or ["-"])
             self.style_combo.addItems([s["name"] for s in self.styles] or ["-"])
@@ -281,6 +325,13 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel("Waiting for a piece — place one in frame and hold still")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px;")
         left.addWidget(self.status_label)
+
+        # what to actually DO with the piece - the bit the operator acts on
+        self.action_label = QLabel("")
+        self.action_label.setWordWrap(True)
+        self.action_label.setStyleSheet("font-size: 15px; font-weight: 700; padding: 8px; border-radius: 6px;")
+        self.action_label.hide()
+        left.addWidget(self.action_label)
 
         hint = QLabel("Auto-captures when the frame settles. Press SPACE to force a capture.")
         hint.setStyleSheet("color: #64748b; font-size: 11px; padding: 0 6px;")
@@ -409,6 +460,8 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"{decision.upper()} — {defect} ({record['confidence']:.0%}){suffix}")
         self.status_label.setStyleSheet(f"font-size: 14px; font-weight: 700; padding: 6px; color: {color};")
 
+        self._show_action(record)
+
         self.stats[decision] += 1
         self.stat_labels[decision].setText(str(self.stats[decision]))
 
@@ -421,6 +474,36 @@ class MainWindow(QMainWindow):
             self._reset_garment()
         else:
             self._update_view_prompt()
+
+    def _show_action(self, record):
+        """Turns a defect name into an instruction the operator can act on -
+        scrap it, send it for rework, or get a supervisor to look."""
+        VERDICT_STYLE = {
+            "reject": ("#ef4444", "REJECT"),
+            "rework": ("#f59e0b", "REWORK"),
+            "check": ("#60a5fa", "CHECK"),
+        }
+        defect = record.get("predictedDefect")
+        if not defect:
+            self.action_label.setText("✓  ACCEPT — no defect found, pass this piece")
+            self.action_label.setStyleSheet(
+                "font-size: 15px; font-weight: 700; padding: 8px; border-radius: 6px;"
+                "color: #22c55e; background: rgba(34,197,94,0.12);"
+            )
+            self.action_label.show()
+            return
+
+        entry = self.actions.get(defect) or {}
+        verdict = entry.get("verdict", "check")
+        action = entry.get("action") or f"'{defect}' found — no action configured, check manually"
+        color, label = VERDICT_STYLE.get(verdict, VERDICT_STYLE["check"])
+
+        self.action_label.setText(f"{label} — {action}")
+        self.action_label.setStyleSheet(
+            f"font-size: 15px; font-weight: 700; padding: 8px; border-radius: 6px;"
+            f"color: {color}; background: rgba(148,163,184,0.12);"
+        )
+        self.action_label.show()
 
     def _on_error(self, message):
         self.status_label.setText(f"Error: {message}")

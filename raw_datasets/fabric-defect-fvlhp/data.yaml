@@ -1,0 +1,15 @@
+names:
+- Cassure
+- Tache
+- defaut
+- fil tire ou gros
+nc: 4
+roboflow:
+  license: CC BY 4.0
+  project: fabric-defect-fvlhp
+  url: https://universe.roboflow.com/fabric-defect-zpkfr/fabric-defect-fvlhp/dataset/2
+  version: 2
+  workspace: fabric-defect-zpkfr
+test: ../test/images
+train: ../train/images
+val: ../valid/images

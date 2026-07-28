@@ -25,6 +25,20 @@ DEFAULTS = {
         {"name": "ST-1002", "category": "panty"},
         {"name": "ST-1003", "category": "tshirt"},
     ],
+    # what the operator should actually DO when each defect is found -
+    # a defect name alone doesn't tell anyone whether to repair, wash or
+    # scrap the piece. "verdict" drives the colour/wording shown.
+    "actions": {
+        "hole": {"verdict": "reject", "action": "Fabric is holed — cannot repair, scrap the piece"},
+        "tear": {"verdict": "reject", "action": "Fabric torn — scrap unless within seam allowance"},
+        "Cassure": {"verdict": "reject", "action": "Fabric torn — scrap unless within seam allowance"},
+        "stain": {"verdict": "rework", "action": "Send to spotting/washing, then re-inspect"},
+        "Tache": {"verdict": "rework", "action": "Send to spotting/washing, then re-inspect"},
+        "thread": {"verdict": "rework", "action": "Trim loose/pulled thread and re-inspect"},
+        "fil tire ou gros": {"verdict": "rework", "action": "Trim loose/pulled thread and re-inspect"},
+        "defect": {"verdict": "check", "action": "Unclear defect — manual check by supervisor"},
+        "defaut": {"verdict": "check", "action": "Unclear defect — manual check by supervisor"},
+    },
 }
 
 

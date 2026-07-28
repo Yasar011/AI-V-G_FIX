@@ -1,0 +1,15 @@
+names:
+- dog
+- nina_izi
+- teshik
+- ulanish
+nc: 4
+roboflow:
+  license: CC BY 4.0
+  project: fabric-defect-35n47
+  url: https://universe.roboflow.com/azizullohs-workspace/fabric-defect-35n47/dataset/1
+  version: 1
+  workspace: azizullohs-workspace
+test: ../test/images
+train: ../train/images
+val: ../valid/images
