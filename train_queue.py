@@ -21,6 +21,7 @@ from src.paths import app_path
 FREE_VRAM_MB = 1000
 POLL_SECONDS = 60
 LOG = app_path("logs", "train_queue.log")
+LOCK = app_path("logs", "gpu.lock")
 
 # name, dataset, run name, epochs
 JOBS = [
@@ -47,9 +48,55 @@ def gpu_busy():
         return False
 
 
+def take_lock():
+    """
+    Claims the GPU atomically.
+
+    Polling free VRAM alone is not enough: two waiting jobs can both see the
+    card free in the same window and both launch, and on a 4 GB card the
+    second one dies with a segfault. O_CREAT|O_EXCL either creates the file
+    or fails, so exactly one process can win.
+    """
+    os.makedirs(os.path.dirname(LOCK), exist_ok=True)
+    try:
+        fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        return False
+    with os.fdopen(fd, "w") as f:
+        f.write(str(os.getpid()))
+    return True
+
+
+def release_lock():
+    try:
+        os.remove(LOCK)
+    except OSError:
+        pass
+
+
+def lock_is_stale():
+    """A lock left behind by a crashed run would block everything forever."""
+    if not os.path.exists(LOCK):
+        return False
+    try:
+        with open(LOCK) as f:
+            pid = int(f.read().strip())
+    except (OSError, ValueError):
+        return True
+    out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"],
+                         capture_output=True, text=True).stdout
+    return str(pid) not in out
+
+
 def wait_for_gpu(label):
+    """Waits for both the card and the lock, then claims the lock."""
     waited = 0
-    while gpu_busy():
+    while True:
+        if lock_is_stale():
+            log(f"[{label}] clearing a stale lock from a crashed run")
+            release_lock()
+        if not gpu_busy() and take_lock():
+            return
         if waited % 900 == 0:
             log(f"[{label}] GPU busy — waiting ({waited // 60} min)")
         time.sleep(POLL_SECONDS)
@@ -73,6 +120,8 @@ def main():
             log(f"[{label}] finished — weights in runs/detect/runs_stage1/{name}/weights/")
         except Exception as exc:
             log(f"[{label}] FAILED: {exc}")
+        finally:
+            release_lock()
 
     log("queue complete")
 
