@@ -28,7 +28,7 @@ def init_firebase():
 
 def log_inspection(image_url, predicted_defect, confidence, final_decision, rejection_reason=None,
                    bbox=None, detections=None, line=None, floor=None, style=None, operator=None,
-                   garment_id=None, view=None):
+                   garment_id=None, view=None, model_version=None, shift=None):
     """
     Writes one inspection record and returns it (including the generated
     pieceId) so the caller can print/display it.
@@ -44,6 +44,11 @@ def log_inspection(image_url, predicted_defect, confidence, final_decision, reje
     One physical garment is photographed from several angles (Front, Side,
     Back...), so each capture is its own record sharing a garmentId, with
     view naming which angle it is.
+
+    modelVersion records which weights made the call. Without it, records
+    from before and after a retrain are indistinguishable - which breaks
+    both QC traceability and any honest "did the new model help?"
+    comparison. shift lets defect rates be broken down by shift.
     """
     init_firebase()
     ref = db.reference("inspections")
@@ -65,9 +70,12 @@ def log_inspection(image_url, predicted_defect, confidence, final_decision, reje
         "floor": floor,
         "style": style,
         "operator": operator,
+        "shift": shift,
+        "modelVersion": model_version,
         "humanVerified": False,
         "correctedDefect": None,
         "reviewedAt": None,
+        "reviewedBy": None,
     }
     ref.child(piece_id).set(record)
     return record

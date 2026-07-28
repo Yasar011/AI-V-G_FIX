@@ -42,6 +42,11 @@ AUTO_CAPTURE_STABLE_FRAMES = int(os.getenv("AUTO_CAPTURE_STABLE_FRAMES", "15"))
 # Seconds to wait after a capture before auto-capture can trigger again.
 AUTO_CAPTURE_COOLDOWN_SECONDS = float(os.getenv("AUTO_CAPTURE_COOLDOWN_SECONDS", "4.0"))
 
+# --- Shifts ---
+# Start times of each shift, in order. Defaults to a conventional three-shift
+# day; set to match the factory's actual hours.
+SHIFT_BOUNDARIES = os.getenv("SHIFT_BOUNDARIES", "06:00,14:00,22:00")
+
 
 def check_config():
     """Called at startup so missing credentials fail loudly and early,

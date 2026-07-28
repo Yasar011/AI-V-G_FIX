@@ -28,9 +28,9 @@ from PySide6.QtWidgets import (
 from src.config import (
     check_config, CAMERA_INDEX, CONFIDENCE_THRESHOLD, MODEL_PATH,
     AUTO_CAPTURE_MOTION_THRESHOLD, AUTO_CAPTURE_STILL_THRESHOLD,
-    AUTO_CAPTURE_STABLE_FRAMES, AUTO_CAPTURE_COOLDOWN_SECONDS,
+    AUTO_CAPTURE_STABLE_FRAMES, AUTO_CAPTURE_COOLDOWN_SECONDS, SHIFT_BOUNDARIES,
 )
-from src.inference import run_inference
+from src.inference import run_inference, model_version
 from src.uploader import upload_image
 from src.database import (
     log_inspection, get_recent_inspections, get_options, get_styles, get_categories,
@@ -57,6 +57,33 @@ def decide(defect, confidence):
     if confidence < CONFIDENCE_THRESHOLD:
         return "review", defect
     return "fail", defect
+
+
+def current_shift():
+    """
+    Which shift a capture belongs to, from the clock.
+
+    Defaults to a conventional three-shift day; override SHIFT_BOUNDARIES
+    in .env as "06:00,14:00,22:00" if the factory runs different hours.
+    Recorded so defect rates can be compared across shifts - night-shift
+    fatigue is a real and measurable effect.
+    """
+    now = time.localtime()
+    minutes = now.tm_hour * 60 + now.tm_min
+    bounds = []
+    for part in SHIFT_BOUNDARIES.split(","):
+        h, m = part.strip().split(":")
+        bounds.append(int(h) * 60 + int(m))
+
+    for i, start in enumerate(bounds):
+        end = bounds[(i + 1) % len(bounds)]
+        if start < end:
+            if start <= minutes < end:
+                return f"Shift {i + 1}"
+        else:  # wraps past midnight
+            if minutes >= start or minutes < end:
+                return f"Shift {i + 1}"
+    return "Shift 1"
 
 
 def draw_detections(frame, detections):
@@ -125,6 +152,8 @@ class InspectionWorker(QThread):
                 bbox=result["bbox"], detections=result["detections"],
                 line=self.context.get("line"), floor=self.context.get("floor"),
                 style=self.context.get("style"), operator=self.context.get("operator"),
+                garment_id=self.context.get("garment_id"), view=self.context.get("view"),
+                model_version=model_version(), shift=current_shift(),
             )
             record["localImage"] = marked_name
             self.done.emit(record)

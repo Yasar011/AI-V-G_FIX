@@ -2,6 +2,7 @@
 
 import { useInspections } from "@/hooks/useInspections";
 import { BreakdownChart, BreakdownTable, TopDefects } from "@/components/BreakdownCharts";
+import { AccuracyPanel } from "@/components/AccuracyPanel";
 
 export default function AnalyticsPage() {
   const records = useInspections();
@@ -15,6 +16,16 @@ export default function AnalyticsPage() {
       <p style={{ color: "var(--text2)", fontSize: 13 }}>
         Where defects are actually coming from — by line, floor, and style
       </p>
+
+      <div>
+        <h2 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 4px" }}>
+          How well the model is really doing
+        </h2>
+        <p style={{ color: "var(--text2)", fontSize: 13, margin: "0 0 14px" }}>
+          Measured from human corrections on your own garments — not a benchmark score.
+        </p>
+        <AccuracyPanel records={records} />
+      </div>
 
       <div className="grid-2">
         <BreakdownChart records={records} field="line" title="By line" />

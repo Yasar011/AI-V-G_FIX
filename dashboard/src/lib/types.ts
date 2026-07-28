@@ -22,7 +22,11 @@ export interface InspectionRecord {
   floor?: string | null;
   style?: string | null;
   operator?: string | null;
+  shift?: string | null;
+  /** which weights made this call — lets accuracy be compared across retrains */
+  modelVersion?: string | null;
   humanVerified: boolean;
   correctedDefect: string | null;
   reviewedAt: string | null;
+  reviewedBy?: string | null;
 }

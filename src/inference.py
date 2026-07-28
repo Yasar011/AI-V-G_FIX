@@ -10,10 +10,14 @@ works end to end before Stage 1 training is finished. Once you've
 fine-tuned a model on Colab (Stage 1), point MODEL_PATH in .env at that
 .pt file instead and everything downstream keeps working unchanged.
 """
+import hashlib
+import os
+
 from ultralytics import YOLO
 from .config import MODEL_PATH
 
 _model = None
+_model_version = None
 
 # Floor for what even counts as "a detection worth logging" - well below
 # CONFIDENCE_THRESHOLD (which decides PASS/REVIEW/FAIL). This just filters
@@ -28,6 +32,30 @@ def _get_model():
         print(f"Loading model: {MODEL_PATH} (first run downloads it automatically)")
         _model = YOLO(MODEL_PATH)
     return _model
+
+
+def model_version():
+    """
+    Identifies the weights currently in use, as "<filename>@<hash>".
+
+    The hash is of the file's own bytes, so swapping in a retrained model
+    changes the version automatically - no manual bookkeeping to forget.
+    Stored on every inspection so records stay traceable to the model that
+    judged them across retrains.
+    """
+    global _model_version
+    if _model_version is None:
+        name = os.path.basename(MODEL_PATH)
+        try:
+            digest = hashlib.sha256()
+            with open(MODEL_PATH, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    digest.update(chunk)
+            _model_version = f"{name}@{digest.hexdigest()[:10]}"
+        except OSError:
+            # weights downloaded on demand by ultralytics may not be on disk yet
+            _model_version = name
+    return _model_version
 
 
 def run_inference(image_path):
