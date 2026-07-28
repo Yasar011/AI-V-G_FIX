@@ -1,0 +1,15 @@
+venv/
+models/
+dist/
+runs/
+runs_stage1/
+stage1_dataset/
+dataset_export/
+captures/
+backups/
+logs/
+installer_output/
+.cache/
+tests/
+*.pt
+node_modules/

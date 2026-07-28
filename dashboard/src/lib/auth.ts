@@ -9,6 +9,8 @@ export interface AppUser {
   passwordHash: string;
   name: string;
   role: Role;
+  line?: string;
+  floor?: string;
   createdAt: string;
 }
 
@@ -17,6 +19,8 @@ export interface Session {
   username: string;
   name: string;
   role: Role;
+  line?: string;
+  floor?: string;
 }
 
 const SESSION_KEY = "gfixqc_session";
@@ -57,12 +61,18 @@ export async function login(username: string, password: string): Promise<Session
   const hash = await sha256Hex(password);
   if (hash !== match.passwordHash) throw new Error("Incorrect password");
 
-  const session: Session = { id: match.id, username: match.username, name: match.name, role: match.role };
+  const session: Session = {
+    id: match.id, username: match.username, name: match.name, role: match.role,
+    line: match.line, floor: match.floor,
+  };
   setSession(session);
   return session;
 }
 
-export async function createUser(username: string, password: string, name: string, role: Role) {
+export async function createUser(
+  username: string, password: string, name: string, role: Role,
+  line?: string, floor?: string,
+) {
   const users = await getAllUsers();
   if (users.some((u) => u.username.toLowerCase() === username.trim().toLowerCase())) {
     throw new Error("That username is already taken");
@@ -74,6 +84,8 @@ export async function createUser(username: string, password: string, name: strin
     passwordHash,
     name: name.trim(),
     role,
+    line: line || "",
+    floor: floor || "",
     createdAt: new Date().toISOString(),
   };
   await set(newRef, user);
@@ -95,4 +107,8 @@ export async function deleteUser(id: string) {
 
 export async function updateUserRole(id: string, role: Role) {
   await update(ref(db, `users/${id}`), { role });
+}
+
+export async function updateUserAssignment(id: string, patch: { line?: string; floor?: string }) {
+  await update(ref(db, `users/${id}`), patch);
 }

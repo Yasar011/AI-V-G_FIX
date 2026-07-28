@@ -43,6 +43,9 @@ export function InspectionTable({ records }: { records: InspectionRecord[] }) {
               <th></th>
               <th>Decision</th>
               <th>Defect</th>
+              <th>Line</th>
+              <th>Style</th>
+              <th>View</th>
               <th>Confidence</th>
               <th>Time</th>
               <th>Status</th>
@@ -50,7 +53,7 @@ export function InspectionTable({ records }: { records: InspectionRecord[] }) {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={6} style={{ color: "var(--text3)", textAlign: "center", padding: 24 }}>No inspections yet.</td></tr>
+              <tr><td colSpan={9} style={{ color: "var(--text3)", textAlign: "center", padding: 24 }}>No inspections yet.</td></tr>
             )}
             {filtered.map((r) => (
               <tr key={r.pieceId} onClick={() => setSelected(r)} style={{ cursor: "pointer" }}>
@@ -67,6 +70,9 @@ export function InspectionTable({ records }: { records: InspectionRecord[] }) {
                     </span>
                   )}
                 </td>
+                <td style={{ color: "var(--text2)" }}>{r.line || "—"}</td>
+                <td style={{ color: "var(--text2)" }}>{r.style || "—"}</td>
+                <td style={{ color: "var(--text3)" }}>{r.view || "—"}</td>
                 <td style={{ fontFamily: "var(--mono)" }}>{(r.confidence * 100).toFixed(0)}%</td>
                 <td style={{ color: "var(--text3)" }}>{r.timestamp.split("T")[1]?.slice(0, 8)}</td>
                 <td>

@@ -8,6 +8,8 @@ export interface Detection {
 
 export interface InspectionRecord {
   pieceId: string;
+  garmentId?: string;
+  view?: string | null;
   timestamp: string;
   imageUrl: string;
   predictedDefect: string | null;
@@ -16,6 +18,10 @@ export interface InspectionRecord {
   detections?: Detection[];
   finalDecision: Decision;
   rejectionReason: string | null;
+  line?: string | null;
+  floor?: string | null;
+  style?: string | null;
+  operator?: string | null;
   humanVerified: boolean;
   correctedDefect: string | null;
   reviewedAt: string | null;

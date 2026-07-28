@@ -28,3 +28,6 @@ venv/
 
 # model weights (can be large — track separately if needed)
 *.pt
+
+.vercel
+.env*

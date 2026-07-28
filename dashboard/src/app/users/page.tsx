@@ -6,18 +6,24 @@ import {
   createUser,
   deleteUser,
   updateUserRole,
+  updateUserAssignment,
   getSession,
   type AppUser,
   type Role,
 } from "@/lib/auth";
+import { getLines, getFloors } from "@/lib/config";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AppUser[] | null>(null);
+  const [lines, setLines] = useState<string[]>([]);
+  const [floors, setFloors] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("Supervisor");
+  const [line, setLine] = useState("");
+  const [floor, setFloor] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +35,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     refresh();
+    (async () => {
+      setLines(await getLines());
+      setFloors(await getFloors());
+    })();
   }, []);
 
   async function handleCreate(e: React.FormEvent) {
@@ -40,11 +50,13 @@ export default function UsersPage() {
     setError("");
     setSaving(true);
     try {
-      await createUser(username, password, name, role);
+      await createUser(username, password, name, role, line, floor);
       setUsername("");
       setPassword("");
       setName("");
       setRole("Supervisor");
+      setLine("");
+      setFloor("");
       setShowForm(false);
       await refresh();
     } catch (err) {
@@ -65,13 +77,18 @@ export default function UsersPage() {
     await refresh();
   }
 
+  async function handleAssignment(id: string, patch: { line?: string; floor?: string }) {
+    await updateUserAssignment(id, patch);
+    await refresh();
+  }
+
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
       <div className="card-header">
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>User accounts</h2>
           <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 2 }}>
-            Who can sign in to this dashboard, and what they can see
+            Supervisors only see their assigned line&apos;s inspections. Admins see everything.
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm((s) => !s)}>
@@ -81,9 +98,7 @@ export default function UsersPage() {
 
       {showForm && (
         <div className="card">
-          {error && (
-            <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 14 }}>{error}</div>
-          )}
+          {error && <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 14 }}>{error}</div>}
           <form onSubmit={handleCreate}>
             <div className="form-row">
               <div className="form-group">
@@ -108,6 +123,22 @@ export default function UsersPage() {
                 </select>
               </div>
             </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Assigned line</label>
+                <select className="form-input" value={line} onChange={(e) => setLine(e.target.value)}>
+                  <option value="">All lines</option>
+                  {lines.map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Assigned floor</label>
+                <select className="form-input" value={floor} onChange={(e) => setFloor(e.target.value)}>
+                  <option value="">All floors</option>
+                  {floors.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+            </div>
             <button className="btn btn-primary" disabled={saving} type="submit">
               {saving ? "Creating..." : "Create user"}
             </button>
@@ -123,15 +154,16 @@ export default function UsersPage() {
                 <th>Name</th>
                 <th>Username</th>
                 <th>Role</th>
-                <th>Created</th>
+                <th>Line</th>
+                <th>Floor</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {users === null ? (
-                <tr><td colSpan={5} style={{ color: "var(--text3)" }}>Loading…</td></tr>
+                <tr><td colSpan={6} style={{ color: "var(--text3)" }}>Loading…</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={5} style={{ color: "var(--text3)" }}>No users yet.</td></tr>
+                <tr><td colSpan={6} style={{ color: "var(--text3)" }}>No users yet.</td></tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id}>
@@ -148,7 +180,28 @@ export default function UsersPage() {
                         <option value="Admin">Admin</option>
                       </select>
                     </td>
-                    <td style={{ color: "var(--text3)" }}>{u.createdAt?.split("T")[0]}</td>
+                    <td>
+                      <select
+                        className="form-input"
+                        style={{ width: "auto", padding: "4px 8px", fontSize: 12 }}
+                        value={u.line || ""}
+                        onChange={(e) => handleAssignment(u.id, { line: e.target.value })}
+                      >
+                        <option value="">All</option>
+                        {lines.map((l) => <option key={l} value={l}>{l}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        className="form-input"
+                        style={{ width: "auto", padding: "4px 8px", fontSize: 12 }}
+                        value={u.floor || ""}
+                        onChange={(e) => handleAssignment(u.id, { floor: e.target.value })}
+                      >
+                        <option value="">All</option>
+                        {floors.map((f) => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </td>
                     <td>
                       <button
                         className="btn btn-danger btn-sm"

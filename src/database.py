@@ -26,7 +26,9 @@ def init_firebase():
     return _app
 
 
-def log_inspection(image_url, predicted_defect, confidence, final_decision, rejection_reason=None, bbox=None, detections=None):
+def log_inspection(image_url, predicted_defect, confidence, final_decision, rejection_reason=None,
+                   bbox=None, detections=None, line=None, floor=None, style=None, operator=None,
+                   garment_id=None, view=None):
     """
     Writes one inspection record and returns it (including the generated
     pieceId) so the caller can print/display it.
@@ -35,6 +37,13 @@ def log_inspection(image_url, predicted_defect, confidence, final_decision, reje
     backward compatibility with review.py/export_dataset.py/the dashboard).
     detections is the full list when a piece has more than one defect - see
     src/inference.py.
+
+    line/floor/style/operator tag which production context the piece came
+    from, so the dashboard can scope what each user sees to their own line.
+
+    One physical garment is photographed from several angles (Front, Side,
+    Back...), so each capture is its own record sharing a garmentId, with
+    view naming which angle it is.
     """
     init_firebase()
     ref = db.reference("inspections")
@@ -42,6 +51,8 @@ def log_inspection(image_url, predicted_defect, confidence, final_decision, reje
 
     record = {
         "pieceId": piece_id,
+        "garmentId": garment_id or piece_id,
+        "view": view,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
         "imageUrl": image_url,
         "predictedDefect": predicted_defect,
@@ -50,12 +61,64 @@ def log_inspection(image_url, predicted_defect, confidence, final_decision, reje
         "detections": detections or [],
         "finalDecision": final_decision,
         "rejectionReason": rejection_reason,
+        "line": line,
+        "floor": floor,
+        "style": style,
+        "operator": operator,
         "humanVerified": False,
         "correctedDefect": None,
         "reviewedAt": None,
     }
     ref.child(piece_id).set(record)
     return record
+
+
+def get_recent_inspections(limit=20):
+    """
+    Returns the most recent [(pieceId, record), ...], newest first - used by
+    the capture app to repopulate its history panel on startup instead of
+    starting blank every time.
+    """
+    init_firebase()
+    all_records = db.reference("inspections").get() or {}
+    items = list(all_records.items())
+    items.sort(key=lambda item: item[1].get("timestamp", ""), reverse=True)
+    return items[:limit]
+
+
+def get_options(kind):
+    """
+    Returns the configured list of lines / floors, e.g.
+    get_options("lines") -> ["Line 1", "Line 2"]. Managed from the
+    dashboard's Settings page.
+    """
+    init_firebase()
+    values = db.reference(f"config/{kind}").get() or []
+    if isinstance(values, dict):
+        values = list(values.values())
+    return values
+
+
+def get_styles():
+    """
+    Returns [{"name": "ST-1234", "category": "shorts"}, ...]. A style's
+    category decides which views get captured for it (see get_categories).
+    """
+    init_firebase()
+    values = db.reference("config/styles").get() or []
+    if isinstance(values, dict):
+        values = list(values.values())
+    return [v for v in values if isinstance(v, dict)]
+
+
+def get_categories():
+    """
+    Returns {"shorts": ["Front", "Side", "Back"], "panty": ["Front", "Back"]}
+    - the ordered list of views the operator is walked through for each
+    garment of that category.
+    """
+    init_firebase()
+    return db.reference("config/categories").get() or {}
 
 
 def get_pending_review():

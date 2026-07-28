@@ -8,9 +8,11 @@ import { Sidebar } from "@/components/Sidebar";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Overview",
+  "/analytics": "Defect analytics",
   "/inspections": "Inspections",
   "/review": "Review queue",
   "/users": "Users",
+  "/settings": "Settings",
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {

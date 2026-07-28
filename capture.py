@@ -14,6 +14,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 
 import cv2
 import numpy as np
@@ -21,7 +22,7 @@ from PySide6.QtCore import Qt, QTimer, QThread, Signal
 from PySide6.QtGui import QImage, QPixmap, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout,
-    QHBoxLayout, QScrollArea, QFrame,
+    QHBoxLayout, QScrollArea, QFrame, QComboBox,
 )
 
 from src.config import (
@@ -31,7 +32,9 @@ from src.config import (
 )
 from src.inference import run_inference
 from src.uploader import upload_image
-from src.database import log_inspection
+from src.database import (
+    log_inspection, get_recent_inspections, get_options, get_styles, get_categories,
+)
 from src.logging_setup import setup_logging
 
 CAPTURE_DIR = "captures"
@@ -60,9 +63,10 @@ class InspectionWorker(QThread):
     done = Signal(dict)
     error = Signal(str)
 
-    def __init__(self, frame):
+    def __init__(self, frame, context):
         super().__init__()
         self.frame = frame
+        self.context = context
 
     def run(self):
         try:
@@ -76,6 +80,8 @@ class InspectionWorker(QThread):
             record = log_inspection(
                 image_url, result["defect"], result["confidence"], decision, reason,
                 bbox=result["bbox"], detections=result["detections"],
+                line=self.context.get("line"), floor=self.context.get("floor"),
+                style=self.context.get("style"), operator=self.context.get("operator"),
             )
             record["localImage"] = filename
             self.done.emit(record)
@@ -90,7 +96,10 @@ class ResultCard(QFrame):
     def __init__(self, record):
         super().__init__()
         self.setObjectName("card")
-        color = DECISION_COLORS[record["finalDecision"]]
+        # older records (and any written before a field existed) may be
+        # missing keys, so everything here reads defensively
+        decision = record.get("finalDecision") or "review"
+        color = DECISION_COLORS.get(decision, "#64748b")
         self.setStyleSheet(f"""
             #card {{ background: #1e293b; border-left: 4px solid {color}; border-radius: 6px; }}
         """)
@@ -98,20 +107,22 @@ class ResultCard(QFrame):
         thumb = QLabel()
         thumb.setFixedSize(56, 56)
         thumb.setScaledContents(True)
-        pixmap = QPixmap(record["localImage"])
+        pixmap = QPixmap(record.get("localImage") or "")
         if not pixmap.isNull():
             thumb.setPixmap(pixmap)
 
-        decision_label = QLabel(record["finalDecision"].upper())
+        view = record.get("view")
+        decision_label = QLabel(f"{decision.upper()}{f'  ·  {view}' if view else ''}")
         decision_label.setStyleSheet(f"color: {color}; font-weight: 700; font-size: 13px;")
 
-        defect = record["predictedDefect"] or "no defect"
+        defect = record.get("predictedDefect") or "no defect"
         extra = len(record.get("detections") or []) - 1
         suffix = f" (+{extra} more)" if extra > 0 else ""
-        detail = QLabel(f"{defect} · {record['confidence']:.0%}{suffix}")
+        detail = QLabel(f"{defect} · {record.get('confidence', 0):.0%}{suffix}")
         detail.setStyleSheet("color: #cbd5e1; font-size: 12px;")
 
-        time_label = QLabel(record["timestamp"].split("T")[1][:8])
+        timestamp = record.get("timestamp") or ""
+        time_label = QLabel(timestamp.split("T")[1][:8] if "T" in timestamp else "")
         time_label.setStyleSheet("color: #64748b; font-size: 11px;")
 
         text_col = QVBoxLayout()
@@ -144,17 +155,80 @@ class MainWindow(QMainWindow):
         self.stable_count = 0
         self.cooldown_until = 0.0
 
+        # production context + multi-view state (see _current_view)
+        self.styles = []
+        self.categories = {}
+        self.garment_id = None
+        self.view_index = 0
+
         self.cap = cv2.VideoCapture(CAMERA_INDEX)
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open camera at index {CAMERA_INDEX}.")
 
         self._build_ui()
+        self._load_config()
+        self._load_history()
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_frame)
         self.timer.start(30)
 
         QShortcut(QKeySequence(Qt.Key_Space), self).activated.connect(self._capture)
+
+    def _load_config(self):
+        """Pulls the configured lines/floors/styles/categories from Firebase
+        (managed in the dashboard's Settings page) into the dropdowns."""
+        try:
+            self.styles = get_styles()
+            self.categories = get_categories()
+            self.line_combo.addItems(get_options("lines") or ["-"])
+            self.floor_combo.addItems(get_options("floors") or ["-"])
+            self.style_combo.addItems([s["name"] for s in self.styles] or ["-"])
+        except Exception:
+            logger.exception("Could not load config from Firebase")
+        self._reset_garment()
+
+    def _load_history(self):
+        """Repopulates the results panel from Firebase so closing and
+        reopening the app doesn't look like the data vanished."""
+        try:
+            for _, record in reversed(get_recent_inspections(15)):
+                record.setdefault("localImage", "")
+                self.history_container.insertWidget(0, ResultCard(record))
+                decision = record.get("finalDecision")
+                if decision in self.stats:
+                    self.stats[decision] += 1
+            for key, label in self.stat_labels.items():
+                label.setText(str(self.stats[key]))
+        except Exception:
+            logger.exception("Could not load inspection history")
+
+    def _views_for_current_style(self):
+        """The ordered views (Front/Side/Back...) for the selected style's
+        category. Falls back to a single unnamed view if nothing configured."""
+        name = self.style_combo.currentText()
+        style = next((s for s in self.styles if s.get("name") == name), None)
+        if not style:
+            return [None]
+        return self.categories.get(style.get("category")) or [None]
+
+    def _current_view(self):
+        views = self._views_for_current_style()
+        return views[self.view_index % len(views)]
+
+    def _reset_garment(self):
+        """Starts a fresh garment - new id, back to the first view."""
+        self.garment_id = uuid.uuid4().hex[:8]
+        self.view_index = 0
+        self._update_view_prompt()
+
+    def _update_view_prompt(self):
+        views = self._views_for_current_style()
+        view = self._current_view()
+        if view is None:
+            self.view_label.setText("Place a piece in frame")
+        else:
+            self.view_label.setText(f"Show the {view.upper()}  ({self.view_index + 1} of {len(views)})")
 
     def _build_ui(self):
         central = QWidget()
@@ -172,11 +246,36 @@ class MainWindow(QMainWindow):
         left.addWidget(title)
         left.addWidget(subtitle)
 
+        # --- production context: which line/floor/style is being inspected ---
+        combo_style = """
+            QComboBox { background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+                        border-radius: 6px; padding: 5px 8px; font-size: 12px; }
+            QComboBox QAbstractItemView { background: #1e293b; color: #e2e8f0;
+                        selection-background-color: #3b82f6; }
+        """
+        context_row = QHBoxLayout()
+        self.line_combo = QComboBox()
+        self.floor_combo = QComboBox()
+        self.style_combo = QComboBox()
+        for label_text, combo in (("Line", self.line_combo), ("Floor", self.floor_combo), ("Style", self.style_combo)):
+            lbl = QLabel(label_text)
+            lbl.setStyleSheet("color: #64748b; font-size: 11px;")
+            combo.setStyleSheet(combo_style)
+            context_row.addWidget(lbl)
+            context_row.addWidget(combo)
+        context_row.addStretch()
+        self.style_combo.currentTextChanged.connect(lambda _: self._reset_garment())
+        left.addLayout(context_row)
+
         self.feed_label = QLabel()
-        self.feed_label.setFixedSize(720, 480)
+        self.feed_label.setFixedSize(720, 440)
         self.feed_label.setStyleSheet("background: black; border-radius: 8px;")
         self.feed_label.setAlignment(Qt.AlignCenter)
         left.addWidget(self.feed_label)
+
+        self.view_label = QLabel("Place a piece in frame")
+        self.view_label.setStyleSheet("font-size: 17px; font-weight: 700; color: #60a5fa; padding: 4px 6px;")
+        left.addWidget(self.view_label)
 
         self.status_label = QLabel("Waiting for a piece — place one in frame and hold still")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px;")
@@ -287,7 +386,15 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Inspecting...")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; padding: 6px; color: #94a3b8;")
 
-        self.worker = InspectionWorker(self.current_frame.copy())
+        context = {
+            "line": self.line_combo.currentText(),
+            "floor": self.floor_combo.currentText(),
+            "style": self.style_combo.currentText(),
+            "operator": None,
+            "garment_id": self.garment_id,
+            "view": self._current_view(),
+        }
+        self.worker = InspectionWorker(self.current_frame.copy(), context)
         self.worker.done.connect(self._on_result)
         self.worker.error.connect(self._on_error)
         self.worker.start()
@@ -306,6 +413,13 @@ class MainWindow(QMainWindow):
 
         self.history_container.insertWidget(0, ResultCard(record))
         self.cooldown_until = time.time() + AUTO_CAPTURE_COOLDOWN_SECONDS
+
+        # advance to the next view of this garment, or start a fresh one
+        self.view_index += 1
+        if self.view_index >= len(self._views_for_current_style()):
+            self._reset_garment()
+        else:
+            self._update_view_prompt()
 
     def _on_error(self, message):
         self.status_label.setText(f"Error: {message}")
