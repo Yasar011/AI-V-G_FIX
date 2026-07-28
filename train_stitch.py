@@ -50,7 +50,7 @@ def main():
         imgsz=640,
         batch=16,
         device=0,
-        patience=25,
+        patience=25, workers=4,
         project="runs_stage1",
         name="train_stitch_S",
     )

@@ -24,7 +24,11 @@ LOG = app_path("logs", "train_queue.log")
 LOCK = app_path("logs", "gpu.lock")
 
 # name, dataset, run name, epochs
+# Both jobs live here rather than in separate scripts: two independent
+# waiters is exactly what let them collide on the GPU in the first place.
 JOBS = [
+    ("Stitching S", "stitch_dataset/data.yaml",
+     "train_stitch_S", 120),
     ("Fabric v6 (with clothes-stain)", "fabric_dataset_v6/data.yaml",
      "train_v6_fabric_clothes", 120),
 ]
@@ -116,7 +120,7 @@ def main():
         try:
             model = YOLO("yolov8n.pt")
             model.train(data=data, epochs=epochs, imgsz=640, batch=16,
-                        device=0, patience=25, project="runs_stage1", name=name)
+                        device=0, patience=25, workers=4, project="runs_stage1", name=name)
             log(f"[{label}] finished — weights in runs/detect/runs_stage1/{name}/weights/")
         except Exception as exc:
             log(f"[{label}] FAILED: {exc}")
