@@ -11,6 +11,9 @@ runs_stage1/
 .cache/
 dist/
 installer_output/
+logs/
+backups/
+.pytest_cache/
 *.jpg
 *.png
 !README_assets/*

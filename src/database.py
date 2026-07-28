@@ -26,10 +26,15 @@ def init_firebase():
     return _app
 
 
-def log_inspection(image_url, predicted_defect, confidence, final_decision, rejection_reason=None, bbox=None):
+def log_inspection(image_url, predicted_defect, confidence, final_decision, rejection_reason=None, bbox=None, detections=None):
     """
     Writes one inspection record and returns it (including the generated
     pieceId) so the caller can print/display it.
+
+    predictedDefect/confidence/bbox are the single best detection (kept for
+    backward compatibility with review.py/export_dataset.py/the dashboard).
+    detections is the full list when a piece has more than one defect - see
+    src/inference.py.
     """
     init_firebase()
     ref = db.reference("inspections")
@@ -37,11 +42,12 @@ def log_inspection(image_url, predicted_defect, confidence, final_decision, reje
 
     record = {
         "pieceId": piece_id,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
         "imageUrl": image_url,
         "predictedDefect": predicted_defect,
         "confidence": round(confidence, 4),
         "bbox": bbox,
+        "detections": detections or [],
         "finalDecision": final_decision,
         "rejectionReason": rejection_reason,
         "humanVerified": False,
@@ -81,7 +87,7 @@ def mark_reviewed(piece_id, corrected_defect):
     ref.update({
         "humanVerified": True,
         "correctedDefect": corrected_defect,
-        "reviewedAt": datetime.datetime.utcnow().isoformat() + "Z",
+        "reviewedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
     })
 
 

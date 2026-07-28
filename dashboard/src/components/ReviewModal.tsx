@@ -45,6 +45,11 @@ export function ReviewModal({
               {record.finalDecision.toUpperCase()} — predicted &quot;{record.predictedDefect || "no defect"}&quot;
               {" "}({(record.confidence * 100).toFixed(0)}%)
             </p>
+            {(record.detections?.length || 0) > 1 && (
+              <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4 }}>
+                Also detected: {record.detections!.slice(1).map((d) => `${d.defect} (${(d.confidence * 100).toFixed(0)}%)`).join(", ")}
+              </p>
+            )}
           </div>
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>

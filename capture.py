@@ -10,6 +10,7 @@ badge, and confidence — plus running PASS/REVIEW/FAIL counters.
 
 Run with:  python capture.py
 """
+import logging
 import os
 import sys
 import time
@@ -31,8 +32,10 @@ from src.config import (
 from src.inference import run_inference
 from src.uploader import upload_image
 from src.database import log_inspection
+from src.logging_setup import setup_logging
 
 CAPTURE_DIR = "captures"
+logger = logging.getLogger("gfixqc")
 
 DECISION_COLORS = {
     "pass": "#22c55e",
@@ -71,11 +74,13 @@ class InspectionWorker(QThread):
             decision, reason = decide(result["defect"], result["confidence"])
             image_url = upload_image(filename)
             record = log_inspection(
-                image_url, result["defect"], result["confidence"], decision, reason, bbox=result["bbox"]
+                image_url, result["defect"], result["confidence"], decision, reason,
+                bbox=result["bbox"], detections=result["detections"],
             )
             record["localImage"] = filename
             self.done.emit(record)
         except Exception as exc:
+            logger.exception("Inspection failed")
             self.error.emit(str(exc))
 
 
@@ -101,7 +106,9 @@ class ResultCard(QFrame):
         decision_label.setStyleSheet(f"color: {color}; font-weight: 700; font-size: 13px;")
 
         defect = record["predictedDefect"] or "no defect"
-        detail = QLabel(f"{defect} · {record['confidence']:.0%}")
+        extra = len(record.get("detections") or []) - 1
+        suffix = f" (+{extra} more)" if extra > 0 else ""
+        detail = QLabel(f"{defect} · {record['confidence']:.0%}{suffix}")
         detail.setStyleSheet("color: #cbd5e1; font-size: 12px;")
 
         time_label = QLabel(record["timestamp"].split("T")[1][:8])
@@ -289,7 +296,9 @@ class MainWindow(QMainWindow):
         decision = record["finalDecision"]
         color = DECISION_COLORS[decision]
         defect = record["predictedDefect"] or "no defect"
-        self.status_label.setText(f"{decision.upper()} — {defect} ({record['confidence']:.0%})")
+        extra = len(record.get("detections") or []) - 1
+        suffix = f" — {extra} more defect(s) found" if extra > 0 else ""
+        self.status_label.setText(f"{decision.upper()} — {defect} ({record['confidence']:.0%}){suffix}")
         self.status_label.setStyleSheet(f"font-size: 14px; font-weight: 700; padding: 6px; color: {color};")
 
         self.stats[decision] += 1
@@ -309,6 +318,8 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    setup_logging()
+    logger.info("G-FIX QC starting up")
     check_config()
     app = QApplication(sys.argv)
     window = MainWindow()

@@ -15,6 +15,12 @@ from .config import MODEL_PATH
 
 _model = None
 
+# Floor for what even counts as "a detection worth logging" - well below
+# CONFIDENCE_THRESHOLD (which decides PASS/REVIEW/FAIL). This just filters
+# out near-noise boxes so a garment with multiple real defects gets all of
+# them recorded, not just the single loudest one.
+MIN_DETECTION_CONFIDENCE = 0.25
+
 
 def _get_model():
     global _model
@@ -26,21 +32,44 @@ def _get_model():
 
 def run_inference(image_path):
     """
-    Runs the model on one image and returns the single highest-confidence
-    detection, e.g.:
-        {"defect": "hole", "confidence": 0.87, "bbox": [cx, cy, w, h]}
-    (bbox is normalized xywh, same format YOLO label files use) or, if
-    nothing was detected:
-        {"defect": None, "confidence": 1.0, "bbox": None}
+    Runs the model on one image. A garment can have more than one defect,
+    so this returns every detection above MIN_DETECTION_CONFIDENCE, sorted
+    highest-confidence first - plus top-level defect/confidence/bbox kept
+    as the single best detection, unchanged, so existing code (decide(),
+    review.py, export_dataset.py, the dashboard) that only cares about
+    "the" defect keeps working without modification.
+
+        {
+            "defect": "hole", "confidence": 0.87, "bbox": [cx, cy, w, h],
+            "detections": [
+                {"defect": "hole", "confidence": 0.87, "bbox": [...]},
+                {"defect": "stain", "confidence": 0.41, "bbox": [...]},
+            ],
+        }
+
+    or, if nothing was detected:
+        {"defect": None, "confidence": 1.0, "bbox": None, "detections": []}
     """
     model = _get_model()
     results = model(image_path, verbose=False)[0]
 
     if results.boxes is None or len(results.boxes) == 0:
-        return {"defect": None, "confidence": 1.0, "bbox": None}
+        return {"defect": None, "confidence": 1.0, "bbox": None, "detections": []}
 
-    best_box = max(results.boxes, key=lambda b: float(b.conf[0]))
-    label = results.names[int(best_box.cls[0])]
-    confidence = float(best_box.conf[0])
-    bbox = best_box.xywhn[0].tolist()
-    return {"defect": label, "confidence": confidence, "bbox": bbox}
+    detections = []
+    for box in results.boxes:
+        confidence = float(box.conf[0])
+        if confidence < MIN_DETECTION_CONFIDENCE:
+            continue
+        detections.append({
+            "defect": results.names[int(box.cls[0])],
+            "confidence": confidence,
+            "bbox": box.xywhn[0].tolist(),
+        })
+    detections.sort(key=lambda d: d["confidence"], reverse=True)
+
+    if not detections:
+        return {"defect": None, "confidence": 1.0, "bbox": None, "detections": []}
+
+    best = detections[0]
+    return {"defect": best["defect"], "confidence": best["confidence"], "bbox": best["bbox"], "detections": detections}

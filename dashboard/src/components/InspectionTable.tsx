@@ -59,7 +59,14 @@ export function InspectionTable({ records }: { records: InspectionRecord[] }) {
                   <img src={r.imageUrl} alt={r.pieceId} style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover", background: "#000" }} />
                 </td>
                 <td><span className={`badge ${DECISION_BADGE[r.finalDecision]}`}>{r.finalDecision.toUpperCase()}</span></td>
-                <td>{r.predictedDefect || "no defect"}</td>
+                <td>
+                  {r.predictedDefect || "no defect"}
+                  {(r.detections?.length || 0) > 1 && (
+                    <span className="badge badge-gray" style={{ marginLeft: 6 }}>
+                      +{r.detections!.length - 1} more
+                    </span>
+                  )}
+                </td>
                 <td style={{ fontFamily: "var(--mono)" }}>{(r.confidence * 100).toFixed(0)}%</td>
                 <td style={{ color: "var(--text3)" }}>{r.timestamp.split("T")[1]?.slice(0, 8)}</td>
                 <td>
