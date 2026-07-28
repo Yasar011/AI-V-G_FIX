@@ -28,6 +28,10 @@ SOURCES = [
     ("stitch-detection-8g8jd", "stitch-project-uxlok", 2),
     ("nehrin", "stitch-defects", 2),
     ("siri-n2zae", "stitch-pcscf", 2),
+    # photographs of assembled garments rather than flat cloth - far closer
+    # to what an end-line station actually sees, even though they are small
+    ("nisha-kherudkar-s-workspace", "garment-defect-inspection", 1),
+    ("shasti", "garment-defect-detection-hekka", 3),
 ]
 
 # The S-codes we can actually train, in id order.
@@ -35,7 +39,7 @@ CLASSES = ["S1", "S8", "S13", "S18", "S22", "S28", "S_OTHER"]
 
 CODE_NAMES = {
     "S1": "Broken Stitch",
-    "S8": "Looseness",
+    "S8": "Looseness / Loose Tension",
     "S13": "Open Seam",
     "S18": "Puckering",
     "S22": "Skip Stitch",
@@ -61,11 +65,33 @@ ALIASES = {
     "bobbin thread": "S_OTHER",
     "overlap": "S_OTHER",
     "objects": "S_OTHER",
+    # assembled-garment datasets
+    "broken stitch": "S1",
+    "loose thread tension": "S8",
+    "puckering at front pocket": "S18",
+    "bottom puckering": "S18",
+    "raw edge": "S_OTHER",
+    "uneven stitch": "S_OTHER",
+    "incomplete joint": "S_OTHER",
+    "size jump": "S_OTHER",
+    "checks": "S_OTHER",
+    "garment-defect-inspection": "S_OTHER",
     # deliberately dropped - not stitching defects, or negatives
     "good": None,
     "stain and damage": None,
     "stains-discoloration": None,
     "holes_tears": None,
+    "hole": None,
+    "stain": None,
+    "correct placement of bartack": None,
+    "non defective back panle": None,
+    "non defective back panel": None,
+    "non defective front panel": None,
+    "readable letters": None,
+    "nonreadable letters in wash care label": None,
+    "clean finish not ropping": None,
+    "dummy stitch not visible": None,
+    "even height at zipper top": None,
 }
 
 OUT_DIR = "stitch_dataset"
