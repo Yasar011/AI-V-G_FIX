@@ -29,7 +29,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Files]
-Source: "dist\G-FIX QC\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; logs\ and captures\ are runtime output - they get created on first run.
+; Without excluding them, a local test run's leftovers ship to every user.
+Source: "dist\G-FIX QC\*"; DestDir: "{app}"; Excludes: "logs\*,captures\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
