@@ -2,11 +2,17 @@
 Central place all other modules pull settings from.
 Everything here is read from .env (see .env.example) so no secrets
 ever get hardcoded or committed.
+
+Paths are resolved against the app's own directory (see src/paths.py),
+not the working directory - otherwise launching the packaged app from a
+shortcut leaves it unable to find its own .env, key or model.
 """
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+from .paths import app_path
+
+load_dotenv(app_path(".env"))
 
 # --- Cloudinary ---
 CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
@@ -14,13 +20,15 @@ CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 # --- Firebase ---
-FIREBASE_SERVICE_ACCOUNT_PATH = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json")
+FIREBASE_SERVICE_ACCOUNT_PATH = app_path(
+    os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json")
+)
 FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL")
 
 # --- Inspection behaviour ---
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
 CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", "0"))
-MODEL_PATH = os.getenv("MODEL_PATH", "yolov8n.pt")
+MODEL_PATH = app_path(os.getenv("MODEL_PATH", "yolov8n.pt"))
 
 # --- Auto-capture (no button/keypress needed - triggers when a piece is
 # placed in frame and holds still) ---

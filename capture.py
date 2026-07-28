@@ -36,8 +36,9 @@ from src.database import (
     log_inspection, get_recent_inspections, get_options, get_styles, get_categories,
 )
 from src.logging_setup import setup_logging
+from src.paths import app_path
 
-CAPTURE_DIR = "captures"
+CAPTURE_DIR = app_path("captures")
 logger = logging.getLogger("gfixqc")
 
 DECISION_COLORS = {

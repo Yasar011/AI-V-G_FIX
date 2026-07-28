@@ -14,13 +14,7 @@ import os
 import sys
 from logging.handlers import RotatingFileHandler
 
-
-def _app_dir():
-    if getattr(sys, "frozen", False):
-        # PyInstaller bundle: sit next to the .exe
-        return os.path.dirname(sys.executable)
-    # running from source: project root (this file lives in src/)
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from .paths import app_path
 
 
 def setup_logging():
@@ -29,7 +23,7 @@ def setup_logging():
     if logger.handlers:
         return logger
 
-    log_dir = os.path.join(_app_dir(), "logs")
+    log_dir = app_path("logs")
     try:
         os.makedirs(log_dir, exist_ok=True)
         handler = RotatingFileHandler(
