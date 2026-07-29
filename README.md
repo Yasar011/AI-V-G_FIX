@@ -100,7 +100,8 @@ python capture.py
 
 ## About the model right now
 
-Stage 1 is done: `MODEL_PATH` points at `models/defect_best_stage1.pt`, a
+Stage 1 is done: `MODEL_PATH` points at `models/febo-v1.pt` — **Febo**, the
+fabric defect model. It is a
 YOLOv8n fine-tuned on a public Roboflow fabric-defect dataset (4 classes:
 `Cassure`, `Tache`, `defaut`, `fil tire ou gros`). mAP50=0.578,
 mAP50-95=0.351, precision=0.691 (150 epochs) — a real proof-of-concept,
@@ -122,7 +123,7 @@ batch=16 and trains ~3x faster as a result.
 Stage 3 (the real goal) is retraining on your own captured garments via
 the self-learning loop: flagged pieces get confirmed/corrected with
 `review.py`, then `export_dataset.py` turns verified corrections into a
-YOLO-format dataset you can fine-tune from `models/defect_best_stage1.pt`
+YOLO-format dataset you can fine-tune from `models/febo-v1.pt`
 instead of starting over from the generic pretrained weights.
 
 ## Project structure
