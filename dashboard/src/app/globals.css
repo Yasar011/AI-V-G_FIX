@@ -90,3 +90,48 @@ tr:hover td{background:rgba(14,169,143,.045)}
 
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Febo assistant intro ---------- */
+/* A short opening beat when the panel is summoned. Two seconds, then it
+   hands over to the real interface. */
+.febo-intro{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;min-height:300px;gap:2px;animation:febo-fade .35s ease-out}
+.febo-orb{position:relative;width:86px;height:86px;display:flex;align-items:center;
+  justify-content:center;margin-bottom:14px}
+.febo-core{position:relative;width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px;
+  font-family:var(--mono);letter-spacing:-.5px;
+  box-shadow:0 6px 20px rgba(14,169,143,.34);
+  animation:febo-pulse 2.1s ease-out}
+.febo-ring{position:absolute;border-radius:50%;border:1.5px solid var(--accent);opacity:0}
+.febo-ring-1{width:62px;height:62px;animation:febo-ripple 1.9s ease-out .15s}
+.febo-ring-2{width:86px;height:86px;animation:febo-ripple 1.9s ease-out .45s}
+.febo-word{font-size:20px;font-weight:700;letter-spacing:-.3px;
+  animation:febo-rise .5s ease-out .25s both}
+.febo-lines{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.04em}
+.febo-line{opacity:0;transform:translateY(3px);transition:opacity .3s ease,transform .3s ease}
+.febo-line.on{opacity:1;transform:none}
+@keyframes febo-fade{from{opacity:0}to{opacity:1}}
+@keyframes febo-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes febo-pulse{0%{transform:scale(.7);opacity:0}
+  40%{transform:scale(1.06);opacity:1}60%{transform:scale(1)}100%{transform:scale(1);opacity:1}}
+@keyframes febo-ripple{0%{transform:scale(.55);opacity:0}
+  35%{opacity:.5}100%{transform:scale(1.25);opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .febo-intro,.febo-core,.febo-ring,.febo-word{animation:none}
+  .febo-ring{opacity:0}
+  .febo-line{opacity:1;transform:none;transition:none}
+}
+.febo-launch{position:relative;font-weight:600;color:var(--text);
+  border-color:var(--border2)}
+.febo-launch:hover{border-color:var(--accent);color:var(--accent)}
+.febo-launch[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);
+  background:rgba(14,169,143,.07)}
+.febo-dot{width:7px;height:7px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 0 0 0 rgba(14,169,143,.5);animation:febo-beacon 2.8s ease-out infinite}
+@keyframes febo-beacon{0%{box-shadow:0 0 0 0 rgba(14,169,143,.5)}
+  55%{box-shadow:0 0 0 6px rgba(14,169,143,0)}100%{box-shadow:0 0 0 0 rgba(14,169,143,0)}}
+@media (prefers-reduced-motion: reduce){.febo-dot{animation:none}}

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { getSession, logout, type Session } from "@/lib/auth";
 import { Login } from "@/components/Login";
 import { Sidebar } from "@/components/Sidebar";
+import { AnalystChat } from "@/components/AnalystChat";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Overview",
@@ -17,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [chatOpen, setChatOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -38,6 +40,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="topbar">
           <h1 className="page-title">{title}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              className="btn btn-ghost btn-sm febo-launch"
+              onClick={() => setChatOpen((v) => !v)}
+              aria-pressed={chatOpen}
+            >
+              <span className="febo-dot" aria-hidden="true" />
+              Ask Febo
+            </button>
             <span className="fb">🔥 Live</span>
             <div className="user-pill">
               <div className="avatar">{session.name.slice(0, 2).toUpperCase()}</div>
@@ -59,6 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="content">{children}</div>
       </div>
+      {chatOpen && <AnalystChat onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
