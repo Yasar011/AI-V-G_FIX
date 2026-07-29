@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { InspectionRecord } from "@/lib/types";
 import { deleteInspection, markReviewed } from "@/lib/review";
 import { getDefectCatalog, getAiClassToCode, type DefectCode } from "@/lib/config";
+import { BoxAnnotator, type AnnotatedBox } from "@/components/BoxAnnotator";
 
 const DECISION_COLORS: Record<string, string> = {
   pass: "var(--green)",
@@ -27,6 +28,9 @@ export function ReviewModal({
   const [correction, setCorrection] = useState(record.correctedDefect || "");
   const [catalog, setCatalog] = useState<DefectCode[]>([]);
   const [saving, setSaving] = useState(false);
+  // start from whatever was marked before, or from the model's own boxes so
+  // a correct detection only needs confirming rather than redrawing
+  const [boxes, setBoxes] = useState<AnnotatedBox[]>([]);
 
   // Reviewers tag with the factory's real codes (S13 Open Seam, F3 Fabric
   // Hole...), not the model's generic words. The model's prediction is
@@ -35,18 +39,32 @@ export function ReviewModal({
     (async () => {
       const [codes, mapping] = await Promise.all([getDefectCatalog(), getAiClassToCode()]);
       setCatalog(codes);
+      let startCode = record.correctedDefect || "";
       if (!record.correctedDefect && record.predictedDefect) {
         const suggested = mapping[record.predictedDefect];
-        if (suggested) setCorrection(suggested);
+        if (suggested) {
+          setCorrection(suggested);
+          startCode = suggested;
+        }
+      }
+
+      if (record.correctedBoxes?.length) {
+        setBoxes(record.correctedBoxes as AnnotatedBox[]);
+      } else if (startCode && record.detections?.length) {
+        // seed from the model so a correct box just needs confirming
+        setBoxes(record.detections
+          .filter((d) => d.bbox)
+          .map((d) => ({ code: startCode, bbox: d.bbox })));
       }
     })();
-  }, [record.predictedDefect, record.correctedDefect]);
+  }, [record.predictedDefect, record.correctedDefect, record.correctedBoxes, record.detections]);
 
   const selected = catalog.find((d) => d.code === correction);
 
   async function save(value: string) {
     setSaving(true);
-    await markReviewed(record.pieceId, value);
+    // "no defect" carries no boxes by definition
+    await markReviewed(record.pieceId, value, value === "none" ? [] : boxes);
     setSaving(false);
     onClose();
   }
@@ -78,8 +96,14 @@ export function ReviewModal({
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
 
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={record.imageUrl} alt={record.pieceId} style={{ width: "100%", borderRadius: 8, marginBottom: 16, maxHeight: 280, objectFit: "contain", background: "#000" }} />
+        <div style={{ marginBottom: 16 }}>
+          <BoxAnnotator
+            imageUrl={record.imageUrl}
+            code={correction}
+            boxes={boxes}
+            onChange={setBoxes}
+          />
+        </div>
 
         <div className="form-group">
           <label className="form-label">Defect code (ground truth)</label>

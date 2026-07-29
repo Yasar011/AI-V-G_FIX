@@ -75,14 +75,32 @@ def main():
                 f.write(image_bytes)
 
             corrected = record.get("correctedDefect")
-            bbox = record.get("bbox")
+            # Boxes the reviewer drew win over the model's own. This is what
+            # lets a defect the model *missed* become training data: it has
+            # no predicted bbox, so relying on record["bbox"] silently
+            # dropped exactly the examples worth learning from.
+            marked = record.get("correctedBoxes") or []
+
             label_path = os.path.join(out_dir, "labels", split, f"{piece_id}.txt")
             with open(label_path, "w") as f:
-                if corrected and corrected != "none" and bbox:
+                if corrected == "none":
+                    pass  # confirmed clean - a background example
+                elif marked:
+                    for box in marked:
+                        bbox = box.get("bbox")
+                        code = box.get("code") or corrected
+                        if not bbox or not code:
+                            continue
+                        class_id = class_id_for(classes, code)
+                        f.write(f"{class_id} {bbox[0]} {bbox[1]} {bbox[2]} {bbox[3]}\n")
+                elif corrected and record.get("bbox"):
+                    # reviewed before box marking existed - fall back to the
+                    # model's box, which is better than discarding the record
+                    bbox = record["bbox"]
                     class_id = class_id_for(classes, corrected)
                     f.write(f"{class_id} {bbox[0]} {bbox[1]} {bbox[2]} {bbox[3]}\n")
-                # else: empty label file — background/no-defect image, still
-                # useful for teaching the model what a clean piece looks like
+                # otherwise an empty label file: a background image, which
+                # still teaches the model what a clean piece looks like
 
     save_classes(classes)
 

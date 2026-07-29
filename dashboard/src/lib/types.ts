@@ -27,6 +27,9 @@ export interface InspectionRecord {
   modelVersion?: string | null;
   humanVerified: boolean;
   correctedDefect: string | null;
+  /** where the reviewer says the defects actually are — preferred over the
+   *  model's own boxes when building a training set */
+  correctedBoxes?: { code: string; bbox: [number, number, number, number] }[] | null;
   reviewedAt: string | null;
   reviewedBy?: string | null;
 }
