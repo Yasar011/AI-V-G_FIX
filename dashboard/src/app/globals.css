@@ -135,3 +135,13 @@ tr:hover td{background:rgba(14,169,143,.045)}
 @keyframes febo-beacon{0%{box-shadow:0 0 0 0 rgba(14,169,143,.5)}
   55%{box-shadow:0 0 0 6px rgba(14,169,143,0)}100%{box-shadow:0 0 0 0 rgba(14,169,143,0)}}
 @media (prefers-reduced-motion: reduce){.febo-dot{animation:none}}
+.febo-nav{text-align:left;border:none;background:none}
+.febo-nav .febo-nav-mark{width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-size:10px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 0 0 0 rgba(14,169,143,.45);animation:febo-beacon 3s ease-out infinite}
+.febo-nav.active{background:linear-gradient(135deg,var(--accent),#12c2a4);color:#fff;
+  box-shadow:0 6px 16px rgba(14,169,143,.3)}
+.febo-nav.active .febo-nav-mark{background:rgba(255,255,255,.22);animation:none}
+@media (prefers-reduced-motion: reduce){.febo-nav .febo-nav-mark{animation:none}}

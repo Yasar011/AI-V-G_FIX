@@ -51,7 +51,15 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-export function Sidebar({ session }: { session: Session }) {
+export function Sidebar({
+  session,
+  onAskFebo,
+  feboOpen,
+}: {
+  session: Session;
+  onAskFebo: () => void;
+  feboOpen: boolean;
+}) {
   const pathname = usePathname();
   const records = useInspections();
 
@@ -73,6 +81,20 @@ export function Sidebar({ session }: { session: Session }) {
       </div>
 
       <nav className="nav">
+        {/* Febo sits above the routes: it is a panel, not a page, and it is
+            the thing most likely to be reached for. */}
+        <div className="nav-sec">Assistant</div>
+        <button
+          type="button"
+          onClick={onAskFebo}
+          className={`nav-item febo-nav${feboOpen ? " active" : ""}`}
+          style={{ width: "calc(100% - 16px)", font: "inherit" }}
+          aria-pressed={feboOpen}
+        >
+          <span className="febo-nav-mark" aria-hidden="true">F</span>
+          Ask Febo
+        </button>
+
         {NAV.map((group) => (
           <div key={group.section}>
             <div className="nav-sec">{group.section}</div>

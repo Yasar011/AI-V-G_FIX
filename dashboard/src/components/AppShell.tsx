@@ -35,19 +35,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app">
-      <Sidebar session={session} />
+      <Sidebar
+        session={session}
+        onAskFebo={() => setChatOpen((v) => !v)}
+        feboOpen={chatOpen}
+      />
       <div className="main">
         <div className="topbar">
           <h1 className="page-title">{title}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              className="btn btn-ghost btn-sm febo-launch"
-              onClick={() => setChatOpen((v) => !v)}
-              aria-pressed={chatOpen}
-            >
-              <span className="febo-dot" aria-hidden="true" />
-              Ask Febo
-            </button>
             <span className="fb">🔥 Live</span>
             <div className="user-pill">
               <div className="avatar">{session.name.slice(0, 2).toUpperCase()}</div>
