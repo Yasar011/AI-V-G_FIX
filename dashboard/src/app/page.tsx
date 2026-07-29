@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useInspections } from "@/hooks/useInspections";
 import { StatCards } from "@/components/StatCards";
 import { DecisionPie, DefectBar, TrendLine, ConfidenceHistogram } from "@/components/Charts";
+import { ReportButton } from "@/components/ReportButton";
 
 export default function Home() {
   const records = useInspections();
@@ -14,9 +15,12 @@ export default function Home() {
         <div>
           <p style={{ color: "var(--text2)", fontSize: 13 }}>Live inspection stats, at a glance</p>
         </div>
-        <Link href="/inspections" className="btn btn-ghost btn-sm">
-          View all inspections →
-        </Link>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {records && <ReportButton records={records} />}
+          <Link href="/inspections" className="btn btn-ghost btn-sm">
+            View all inspections →
+          </Link>
+        </div>
       </div>
 
       {records === null ? (
